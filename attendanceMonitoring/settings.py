@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'main',
+    'org',
+    'student',
 ]
 
 MIDDLEWARE = [
@@ -116,3 +118,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Session configuration
+# Sessions persist for 2 weeks by default (1209600 seconds)
+# Users will remain logged in until they logout or the session expires
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+SESSION_SAVE_EVERY_REQUEST = False  # Only save session when modified
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Session persists after browser closes

@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+</head>
+<body class="page-dashboard">
+    <div class="navbar">
+        <h1>Student Dashboard</h1>
+        <a href="{% url 'student-logout' %}">Logout</a>
+    </div>
+
+    <div class="dashboard-shell">
+        <div class="welcome-box">
+            <h2>Welcome, Student!</h2>
+            <p>This is your student portal where you can check your attendance records and class information.</p>
+            <div class="status-box">
+                <strong>✓ You are logged in</strong>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <div class="icon">✅</div>
+                <h3>My Attendance</h3>
+                <p>View your attendance history</p>
+            </div>
+            <div class="dashboard-card">
+                <div class="icon">📚</div>
+                <h3>My Classes</h3>
+                <p>See your enrolled classes</p>
+            </div>
+            <div class="dashboard-card">
+                <div class="icon">👤</div>
+                <h3>Profile</h3>
+                <p>Manage your profile information</p>
+            </div>
+            <div class="dashboard-card">
+                <div class="icon">📞</div>
+                <h3>Support</h3>
+                <p>Contact technical support</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

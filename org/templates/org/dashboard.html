@@ -1,0 +1,47 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Dashboard</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+</head>
+<body class="page-dashboard">
+    <div class="navbar">
+        <h1>Organization Dashboard</h1>
+        <a href="{% url 'org-logout' %}">Logout</a>
+    </div>
+
+    <div class="dashboard-shell">
+        <div class="welcome-box">
+            <h2>Welcome to Organization Portal</h2>
+            <p>Manage your attendance monitoring system from here. This is your organization dashboard where you can oversee all attendance-related activities.</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <div class="icon">📊</div>
+                <h3>Reports</h3>
+                <p>View attendance reports and analytics</p>
+            </div>
+            <div class="dashboard-card">
+                <div class="icon">👥</div>
+                <h3>Manage Users</h3>
+                <p>Add and manage student accounts</p>
+            </div>
+            <div class="dashboard-card">
+                <div class="icon">⚙️</div>
+                <h3>Settings</h3>
+                <p>Configure system settings</p>
+            </div>
+            <div class="dashboard-card">
+                <div class="icon">📅</div>
+                <h3>Classes</h3>
+                <p>Manage classes and schedules</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
