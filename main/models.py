@@ -51,7 +51,7 @@ class Student(models.Model):
         verbose_name_plural = "Students"
     
 
-# Organization Model(like CCS, CES and etc)
+# Organization Model(like CES and etc)
 class Organization(models.Model):
 
     # The organization's user account
