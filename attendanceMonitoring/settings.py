@@ -126,3 +126,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 SESSION_COOKIE_AGE = 86400  # 1 day in seconds
 SESSION_SAVE_EVERY_REQUEST = False  # Only save session when modified
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Session persists after browser closes
+
+# RFID reader shared secret (replace with a secure value for production)
+RFID_READER_TOKEN = 'dev-reader-token'

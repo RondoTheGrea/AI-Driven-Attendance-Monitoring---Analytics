@@ -134,13 +134,40 @@ class StudentAccountCreationAdmin(admin.ModelAdmin):
 
 class OrganizationAdmin(admin.ModelAdmin):
     """Admin interface for Organization model"""
-    list_display = ('organization_name', 'get_username', 'contact_number', 'created_at')
+    list_display = ('organization_name', 'get_username', 'contact_number', 'reader_token', 'created_at')
     search_fields = ('organization_name', 'user__username')
     readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        ('Organization Information', {
+            'fields': ('user', 'organization_name', 'contact_number', 'description')
+        }),
+        ('Reader Configuration', {
+            'fields': ('reader_token',),
+            'description': 'Token used by RFID scanners to authenticate. Auto-generated on first save.'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    actions = ['regenerate_reader_token']
     
     def get_username(self, obj):
         return obj.user.username
     get_username.short_description = 'Username'
+
+    def regenerate_reader_token(self, request, queryset):
+        """Action to regenerate reader tokens"""
+        import secrets
+        for org in queryset:
+            org.reader_token = secrets.token_urlsafe(48)
+            org.save()
+        self.message_user(
+            request,
+            f'Regenerated reader token(s) for {queryset.count()} organization(s).',
+            messages.SUCCESS
+        )
+    regenerate_reader_token.short_description = '🔄 Regenerate reader token'
 
 
 # Event Admin

@@ -21,6 +21,7 @@ from main import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),
+    path('api/scan/', views.rfid_scan, name='api-scan'),
     # App URLs
     path('org/', include('org.urls')),
     path('student/', include('student.urls')),

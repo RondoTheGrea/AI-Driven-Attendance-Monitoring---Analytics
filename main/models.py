@@ -60,6 +60,8 @@ class Organization(models.Model):
     # Organization details
     organization_name = models.CharField(max_length=200)
     contact_number = models.CharField(max_length=15)
+    # Reader token used by physical scanners to authenticate and route scans
+    reader_token = models.CharField(max_length=64, blank=True, null=True, unique=True)
     
     # Optional: Additional information
     description = models.TextField(blank=True)
