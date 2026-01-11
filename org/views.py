@@ -1,7 +1,10 @@
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render
 from django.contrib import messages
-from main.models import Organization, Student
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from datetime import datetime
+from main.models import Organization, Student, Event
 
 def org_login(request):
     # If already logged in, redirect to appropriate dashboard
@@ -51,6 +54,165 @@ def org_page(request):
         return redirect('home')
     
     return render(request, 'org/dashboard.html')
+
+
+def _get_event_context(organization):
+    """Return categorized events for an organization."""
+    events = Event.objects.filter(organization=organization).order_by('-event_date', '-start_time')
+
+    now = timezone.now()
+    tz = timezone.get_current_timezone()
+
+    ongoing_events = []
+    future_events = []
+    recent_events = []
+
+    for event in events:
+        start_dt = datetime.combine(event.event_date, event.start_time)
+        end_dt = datetime.combine(event.event_date, event.end_time)
+
+        if timezone.is_naive(start_dt):
+            start_dt = timezone.make_aware(start_dt, tz)
+        if timezone.is_naive(end_dt):
+            end_dt = timezone.make_aware(end_dt, tz)
+
+        if start_dt <= now <= end_dt:
+            ongoing_events.append(event)
+        elif start_dt > now:
+            future_events.append(event)
+        else:
+            recent_events.append(event)
+
+    return {
+        'ongoing_events': ongoing_events,
+        'future_events': future_events,
+        'recent_events': recent_events,
+    }
+
+@login_required(login_url='home')
+def org_dashboard_overview(request):
+    """HTMX endpoint for Overview tab"""
+    try:
+        organization = request.user.organization
+    except Organization.DoesNotExist:
+        return redirect('home')
+    
+    return render(request, 'org/overview/overview.html')
+
+@login_required(login_url='home')
+def org_dashboard_events(request):
+    """HTMX endpoint for Events tab"""
+    try:
+        organization = request.user.organization
+    except Organization.DoesNotExist:
+        return redirect('home')
+
+    context = _get_event_context(organization)
+    return render(request, 'org/events/events.html', context)
+
+
+@login_required(login_url='home')
+def org_dashboard_events_create(request):
+    """HTMX endpoint to create a new event and return updated events list."""
+    try:
+        organization = request.user.organization
+    except Organization.DoesNotExist:
+        return redirect('home')
+
+    if request.method == 'POST':
+        title = (request.POST.get('title') or '').strip()
+        description = (request.POST.get('description') or '').strip()
+        event_date_raw = (request.POST.get('event_date') or '').strip()
+        start_time_raw = (request.POST.get('start_time') or '').strip()
+        end_time_raw = (request.POST.get('end_time') or '').strip()
+
+        errors = []
+
+        # Validate required fields
+        if not title:
+            errors.append('Title is required.')
+        if not event_date_raw:
+            errors.append('Event date is required.')
+        if not start_time_raw:
+            errors.append('Start time is required.')
+        if not end_time_raw:
+            errors.append('End time is required.')
+
+        parsed_date = None
+        parsed_start = None
+        parsed_end = None
+
+        # Parse date and times
+        if event_date_raw:
+            try:
+                parsed_date = datetime.strptime(event_date_raw, '%Y-%m-%d').date()
+            except ValueError:
+                errors.append('Invalid date format. Use YYYY-MM-DD.')
+
+        if start_time_raw:
+            try:
+                parsed_start = datetime.strptime(start_time_raw, '%H:%M').time()
+            except ValueError:
+                errors.append('Invalid start time format. Use HH:MM (24-hour).')
+
+        if end_time_raw:
+            try:
+                parsed_end = datetime.strptime(end_time_raw, '%H:%M').time()
+            except ValueError:
+                errors.append('Invalid end time format. Use HH:MM (24-hour).')
+
+        if parsed_start and parsed_end and parsed_start >= parsed_end:
+            errors.append('End time must be after start time.')
+
+        if errors:
+            return render(request, 'org/events/create.html', {
+                'errors': errors,
+                'form_data': {
+                    'title': title,
+                    'description': description,
+                    'event_date': event_date_raw,
+                    'start_time': start_time_raw,
+                    'end_time': end_time_raw,
+                }
+            })
+
+        # Create event
+        Event.objects.create(
+            organization=organization,
+            title=title,
+            description=description,
+            event_date=parsed_date,
+            start_time=parsed_start,
+            end_time=parsed_end,
+            is_active=True,
+        )
+
+        context = _get_event_context(organization)
+        context['toast'] = 'Event created successfully.'
+        return render(request, 'org/events/events.html', context)
+
+    # GET - return form partial
+    return render(request, 'org/events/create.html')
+
+@login_required(login_url='home')
+def org_dashboard_reports(request):
+    """HTMX endpoint for Reports tab"""
+    try:
+        organization = request.user.organization
+    except Organization.DoesNotExist:
+        return redirect('home')
+    
+    return render(request, 'org/reports/reports.html')
+
+@login_required(login_url='home')
+def org_dashboard_settings(request):
+    """HTMX endpoint for Settings tab"""
+    try:
+        organization = request.user.organization
+    except Organization.DoesNotExist:
+        return redirect('home')
+    
+    return render(request, 'org/settings/settings.html')
 
 def org_logout(request):
     logout(request)

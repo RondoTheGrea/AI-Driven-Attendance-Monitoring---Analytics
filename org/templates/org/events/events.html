@@ -1,0 +1,114 @@
+<!-- Events Tab Content -->
+<div class="tab-content">
+    <div class="content-header">
+        <h2>Events</h2>
+        <button class="btn btn-primary"
+                hx-get="{% url 'org-dashboard-events-create' %}"
+                hx-target="#content-area"
+                hx-swap="innerHTML">
+            + Create New Event
+        </button>
+    </div>
+
+    {% if toast %}
+    <div class="toast toast-success">{{ toast }}</div>
+    {% endif %}
+
+    <div class="events-container">
+        <!-- Ongoing Events Section -->
+        {% if ongoing_events %}
+        <div class="events-section">
+            <div class="section-header">
+                <h3>🔴 Ongoing Events</h3>
+                <span class="event-count">{{ ongoing_events|length }}</span>
+            </div>
+            <div class="events-grid">
+                {% for event in ongoing_events %}
+                <div class="event-card active">
+                    <div class="event-status">LIVE</div>
+                    <div class="event-title">{{ event.title }}</div>
+                    <div class="event-date">{{ event.event_date|date:"M d, Y" }}</div>
+                    <div class="event-time">
+                        <span class="time-icon">⏱️</span>
+                        {{ event.start_time|time:"H:i" }} - {{ event.end_time|time:"H:i" }}
+                    </div>
+                    {% if event.description %}
+                    <div class="event-description">{{ event.description|truncatewords:15 }}</div>
+                    {% endif %}
+                    <div class="event-actions">
+                        <a href="#" class="event-link">View Details</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Future Events Section -->
+        {% if future_events %}
+        <div class="events-section">
+            <div class="section-header">
+                <h3>📅 Upcoming Events</h3>
+                <span class="event-count">{{ future_events|length }}</span>
+            </div>
+            <div class="events-grid">
+                {% for event in future_events %}
+                <div class="event-card">
+                    <div class="event-status">UPCOMING</div>
+                    <div class="event-title">{{ event.title }}</div>
+                    <div class="event-date">{{ event.event_date|date:"M d, Y" }}</div>
+                    <div class="event-time">
+                        <span class="time-icon">⏱️</span>
+                        {{ event.start_time|time:"H:i" }} - {{ event.end_time|time:"H:i" }}
+                    </div>
+                    {% if event.description %}
+                    <div class="event-description">{{ event.description|truncatewords:15 }}</div>
+                    {% endif %}
+                    <div class="event-actions">
+                        <a href="#" class="event-link">View Details</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Events Section -->
+        {% if recent_events %}
+        <div class="events-section">
+            <div class="section-header">
+                <h3>✓ Past Events</h3>
+                <span class="event-count">{{ recent_events|length }}</span>
+            </div>
+            <div class="events-grid">
+                {% for event in recent_events %}
+                <div class="event-card completed">
+                    <div class="event-status">COMPLETED</div>
+                    <div class="event-title">{{ event.title }}</div>
+                    <div class="event-date">{{ event.event_date|date:"M d, Y" }}</div>
+                    <div class="event-time">
+                        <span class="time-icon">⏱️</span>
+                        {{ event.start_time|time:"H:i" }} - {{ event.end_time|time:"H:i" }}
+                    </div>
+                    {% if event.description %}
+                    <div class="event-description">{{ event.description|truncatewords:15 }}</div>
+                    {% endif %}
+                    <div class="event-actions">
+                        <a href="#" class="event-link">View Report</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Empty State -->
+        {% if not ongoing_events and not future_events and not recent_events %}
+        <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <h3>No Events Yet</h3>
+            <p>Create your first event to start tracking attendance</p>
+        </div>
+        {% endif %}
+    </div>
+</div>

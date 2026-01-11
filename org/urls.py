@@ -6,4 +6,11 @@ urlpatterns = [
     path('login/', views.org_login, name='org-login'),        # /org/login/
     path('dashboard/', views.org_page, name='org-page'),
     path('logout/', views.org_logout, name='org-logout'),     # /org/logout/
+    
+    # HTMX endpoints for dashboard tabs
+    path('dashboard/overview/', views.org_dashboard_overview, name='org-dashboard-overview'),
+    path('dashboard/events/', views.org_dashboard_events, name='org-dashboard-events'),
+    path('dashboard/events/create/', views.org_dashboard_events_create, name='org-dashboard-events-create'),
+    path('dashboard/reports/', views.org_dashboard_reports, name='org-dashboard-reports'),
+    path('dashboard/settings/', views.org_dashboard_settings, name='org-dashboard-settings'),
 ]

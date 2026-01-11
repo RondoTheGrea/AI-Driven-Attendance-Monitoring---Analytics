@@ -1,0 +1,62 @@
+<!-- Create Event Form (HTMX partial) -->
+<div class="tab-content">
+    <div class="content-header">
+        <h2>Create Event</h2>
+        <button class="btn btn-secondary"
+                hx-get="{% url 'org-dashboard-events' %}"
+                hx-target="#content-area"
+                hx-swap="innerHTML">
+            ← Back to Events
+        </button>
+    </div>
+
+    {% if errors %}
+    <div class="error-list">
+        {% for error in errors %}
+        <div class="error-chip">{{ error }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form class="event-form"
+          hx-post="{% url 'org-dashboard-events-create' %}"
+          hx-target="#content-area"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="title">Title *</label>
+            <input type="text" id="title" name="title" placeholder="e.g., Tech Fair 2025"
+                   value="{{ form_data.title|default:'' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" placeholder="Brief description of the event">{{ form_data.description|default:'' }}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="event_date">Date *</label>
+                <input type="date" id="event_date" name="event_date" value="{{ form_data.event_date|default:'' }}" required>
+            </div>
+            <div class="form-group">
+                <label for="start_time">Start Time *</label>
+                <input type="time" id="start_time" name="start_time" value="{{ form_data.start_time|default:'' }}" required>
+            </div>
+            <div class="form-group">
+                <label for="end_time">End Time *</label>
+                <input type="time" id="end_time" name="end_time" value="{{ form_data.end_time|default:'' }}" required>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Event</button>
+            <button type="button" class="btn btn-secondary"
+                    hx-get="{% url 'org-dashboard-events' %}"
+                    hx-target="#content-area"
+                    hx-swap="innerHTML">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
