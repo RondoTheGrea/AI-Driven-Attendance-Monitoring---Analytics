@@ -134,7 +134,7 @@ class StudentAccountCreationAdmin(admin.ModelAdmin):
 
 class OrganizationAdmin(admin.ModelAdmin):
     """Admin interface for Organization model"""
-    list_display = ('organization_name', 'get_username', 'contact_number', 'reader_token', 'created_at')
+    list_display = ('id', 'organization_name', 'get_username', 'contact_number', 'reader_token', 'created_at')
     search_fields = ('organization_name', 'user__username')
     readonly_fields = ('created_at', 'updated_at')
     fieldsets = (
@@ -179,7 +179,7 @@ class AttendanceInline(admin.TabularInline):
 
 
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('title', 'organization', 'event_date', 'start_time', 'end_time', 'is_active', 'participation_number')
+    list_display = ('id', 'title', 'organization', 'event_date', 'start_time', 'end_time', 'is_active', 'participation_number')
     list_filter = ('is_active', 'event_date', 'organization')
     search_fields = ('title', 'description')
     readonly_fields = ('created_at',)

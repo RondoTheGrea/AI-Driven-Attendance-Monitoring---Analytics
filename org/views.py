@@ -3,10 +3,13 @@ from django.shortcuts import redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.http import StreamingHttpResponse
+from django.http import StreamingHttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from datetime import datetime
 import time
 import json
+import requests
 from main.models import Organization, Student, Event, Attendance
 
 def org_login(request):
@@ -318,3 +321,275 @@ def org_logout(request):
     logout(request)
     messages.success(request, 'You have been successfully logged out.')
     return redirect('home')
+
+
+@login_required(login_url='home')
+@require_http_methods(["POST"])
+def chat_message(request):
+    """Handle chat messages and forward to n8n workflow"""
+    try:
+        organization = request.user.organization
+    except Organization.DoesNotExist:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        user_message = data.get('message', '').strip()
+        
+        if not user_message:
+            return JsonResponse({'error': 'Message cannot be empty'}, status=400)
+        
+        # Generate or retrieve session ID for this user
+        # This allows n8n to maintain conversation memory per user
+        if 'chat_session_id' not in request.session:
+            import uuid
+            request.session['chat_session_id'] = str(uuid.uuid4())
+        
+        session_id = request.session['chat_session_id']
+        
+        # n8n webhook configuration
+        # TODO: Replace with your actual n8n webhook URL
+        N8N_WEBHOOK_URL = 'http://4.194.202.144/webhook/c2d477ca-e66b-46f5-9b07-7044d621d0d1'
+        
+        # TODO: If you set up Header Auth in n8n, uncomment and add your API key
+        # N8N_API_KEY = 'your-api-key-here'
+        
+        # Prepare the request to n8n
+        headers = {
+            'Content-Type': 'application/json',
+            # Uncomment if using API key authentication
+            # 'X-API-KEY': N8N_API_KEY,
+        }
+        
+        payload = {
+            'message': user_message,
+            'sessionId': session_id,  # For n8n memory
+            'organization_id': organization.id,
+            'organization_name': organization.organization_name,
+            'user_id': request.user.id,
+        }
+        
+        # Send request to n8n webhook
+        try:
+            response = requests.post(
+                N8N_WEBHOOK_URL,
+                json=payload,
+                headers=headers,
+                timeout=30  # 30 second timeout
+            )
+            response.raise_for_status()
+            
+            # Parse n8n response
+            n8n_data = response.json()
+            
+            # Handle different response formats
+            bot_reply = 'I received your message but could not generate a response.'
+            
+            if isinstance(n8n_data, dict):
+                # If it's a dict, look for 'reply' key
+                bot_reply = n8n_data.get('reply', n8n_data.get('output', str(n8n_data)))
+            elif isinstance(n8n_data, list) and len(n8n_data) > 0:
+                # If it's a list, get the first item
+                first_item = n8n_data[0]
+                if isinstance(first_item, dict):
+                    bot_reply = first_item.get('reply', first_item.get('output', str(first_item)))
+                else:
+                    bot_reply = str(first_item)
+            else:
+                # If it's just a string
+                bot_reply = str(n8n_data)
+            
+            return JsonResponse({
+                'reply': bot_reply,
+                'status': 'success'
+            })
+            
+        except requests.exceptions.Timeout:
+            return JsonResponse({
+                'error': 'Request timed out. Please try again.',
+                'status': 'error'
+            }, status=504)
+            
+        except requests.exceptions.RequestException as e:
+            # Log the error for debugging
+            import sys
+            print(f"n8n request error: {str(e)}", file=sys.stderr, flush=True)
+            
+            return JsonResponse({
+                'error': 'Failed to connect to AI service. Please try again later.',
+                'status': 'error'
+            }, status=503)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    
+    except Exception as e:
+        import sys
+        print(f"Chat error: {str(e)}", file=sys.stderr, flush=True)
+        return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+
+# ============================================================================
+# API Endpoints for n8n Integration
+# ============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_get_event_attendance(request, event_id):
+    """
+    API endpoint for n8n to get attendance data for a specific event
+    GET /org/api/event/<event_id>/attendance/
+    
+    Returns:
+    - Event details
+    - List of students who attended with timestamps
+    - Attendance statistics
+    """
+    try:
+        event = Event.objects.get(id=event_id)
+        
+        # Get all attendance records for this event
+        attendances = Attendance.objects.filter(event=event).select_related('student')
+        
+        # Build attendance list
+        attendance_list = []
+        for att in attendances:
+            attendance_list.append({
+                'student_id': att.student.student_id,
+                'name': f"{att.student.first_name} {att.student.last_name}",
+                'email': att.student.email,
+                'course': att.student.course,
+                'year_level': att.student.year_level,
+                'timestamp': att.timestamp.isoformat(),
+                'time_difference': calculate_time_difference(event, att.timestamp)
+            })
+        
+        # Calculate statistics
+        total_attended = len(attendance_list)
+        on_time = sum(1 for a in attendance_list if a['time_difference'] <= 0)
+        late = total_attended - on_time
+        
+        return JsonResponse({
+            'event': {
+                'id': event.id,
+                'title': event.title,
+                'description': event.description,
+                'date': event.event_date.isoformat(),
+                'start_time': event.start_time.isoformat(),
+                'end_time': event.end_time.isoformat(),
+                'is_active': event.is_active,
+            },
+            'attendance': attendance_list,
+            'statistics': {
+                'total_attended': total_attended,
+                'on_time': on_time,
+                'late': late,
+                'attendance_rate': f"{(total_attended / max(1, total_attended)) * 100:.1f}%"
+            },
+            'status': 'success'
+        })
+        
+    except Event.DoesNotExist:
+        return JsonResponse({'error': 'Event not found', 'status': 'error'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e), 'status': 'error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_get_organization_events(request, org_id):
+    """
+    API endpoint for n8n to get all events for an organization
+    GET /org/api/organization/<org_id>/events/
+    """
+    try:
+        organization = Organization.objects.get(id=org_id)
+        events = Event.objects.filter(organization=organization).order_by('-event_date')
+        
+        events_list = []
+        for event in events:
+            attendance_count = Attendance.objects.filter(event=event).count()
+            events_list.append({
+                'id': event.id,
+                'title': event.title,
+                'description': event.description,
+                'date': event.event_date.isoformat(),
+                'start_time': event.start_time.isoformat(),
+                'end_time': event.end_time.isoformat(),
+                'is_active': event.is_active,
+                'total_attendees': attendance_count
+            })
+        
+        return JsonResponse({
+            'organization': {
+                'id': organization.id,
+                'name': organization.organization_name,
+            },
+            'events': events_list,
+            'total_events': len(events_list),
+            'status': 'success'
+        })
+        
+    except Organization.DoesNotExist:
+        return JsonResponse({'error': 'Organization not found', 'status': 'error'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e), 'status': 'error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_get_student_attendance(request, student_id):
+    """
+    API endpoint for n8n to get attendance history for a specific student
+    GET /org/api/student/<student_id>/attendance/
+    """
+    try:
+        student = Student.objects.get(student_id=student_id)
+        attendances = Attendance.objects.filter(student=student).select_related('event').order_by('-timestamp')
+        
+        attendance_list = []
+        for att in attendances:
+            attendance_list.append({
+                'event_id': att.event.id,
+                'event_title': att.event.title,
+                'event_date': att.event.event_date.isoformat(),
+                'timestamp': att.timestamp.isoformat(),
+                'time_difference': calculate_time_difference(att.event, att.timestamp)
+            })
+        
+        return JsonResponse({
+            'student': {
+                'student_id': student.student_id,
+                'name': f"{student.first_name} {student.last_name}",
+                'email': student.email,
+                'course': student.course,
+                'year_level': student.year_level,
+            },
+            'attendance_history': attendance_list,
+            'total_events_attended': len(attendance_list),
+            'status': 'success'
+        })
+        
+    except Student.DoesNotExist:
+        return JsonResponse({'error': 'Student not found', 'status': 'error'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e), 'status': 'error'}, status=500)
+
+
+def calculate_time_difference(event, timestamp):
+    """
+    Calculate minutes difference between attendance timestamp and event start time
+    Negative = early, Positive = late
+    """
+    from datetime import datetime, timedelta
+    
+    # Combine event date and start time
+    event_start = datetime.combine(event.event_date, event.start_time)
+    
+    # Make timezone aware if needed
+    if timezone.is_naive(event_start):
+        event_start = timezone.make_aware(event_start)
+    
+    # Calculate difference in minutes
+    diff = (timestamp - event_start).total_seconds() / 60
+    return int(diff)

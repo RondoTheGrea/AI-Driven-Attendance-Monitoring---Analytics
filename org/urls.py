@@ -16,4 +16,12 @@ urlpatterns = [
     
     # SSE endpoint for real-time attendance updates
     path('api/attendance-stream/<int:event_id>/', views.attendance_stream, name='attendance-stream'),
+    
+    # Chat endpoint for AI insights
+    path('api/chat/', views.chat_message, name='chat-message'),
+    
+    # API endpoints for n8n integration
+    path('api/event/<int:event_id>/attendance/', views.api_get_event_attendance, name='api-event-attendance'),
+    path('api/organization/<int:org_id>/events/', views.api_get_organization_events, name='api-org-events'),
+    path('api/student/<str:student_id>/attendance/', views.api_get_student_attendance, name='api-student-attendance'),
 ]
