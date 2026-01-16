@@ -408,7 +408,7 @@ def chat_message(request):
                 N8N_WEBHOOK_URL,
                 json=payload,
                 headers=headers,
-                timeout=30  # 30 second timeout
+                timeout=60  # 60 second timeout
             )
             response.raise_for_status()
             

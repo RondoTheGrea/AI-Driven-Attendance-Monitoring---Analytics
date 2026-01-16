@@ -7,6 +7,8 @@ body {
     display: flex;
     flex-direction: row;
     min-height: 100vh;
+    max-height: 100vh;
+    overflow: hidden; /* prevent page-level scroll, delegate to inner containers */
 }
 
 #main {
@@ -21,6 +23,8 @@ body {
 
 #content-area {
     animation: fadeIn 0.3s ease;
+    height: 100vh;      /* match viewport height */
+    overflow: hidden;   /* internal tabs handle their own scrolling */
 }
 
 @keyframes fadeIn {
@@ -646,6 +650,9 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    height: calc(100vh - 120px); /* fit into remaining screen below header */
+    min-height: 0; /* allow inner sections to scroll instead of stretching page */
+    overflow: hidden;
 }
 
 .overview-title {
@@ -747,7 +754,8 @@ body {
 #bottom {
     display: flex;
     flex-direction: column;
-    height: auto;
+    flex: 1;          /* take remaining space under #top/filter/title */
+    min-height: 0;    /* enable internal scroll containers */
     gap: 1vh;
 }
 
@@ -816,6 +824,8 @@ body {
     flex-direction: row;
     gap: 1vw;
     width: 100%;
+    flex: 1;          /* share bottom height with list/sidebar */
+    min-height: 0;
 }
 
 aside {
@@ -956,6 +966,7 @@ aside {
     border-radius: 0.5vh;
     padding: 0;
     gap: 1vh;
+    min-height: 0;    /* so #students can scroll inside */
 }
 
 #list > .flex {

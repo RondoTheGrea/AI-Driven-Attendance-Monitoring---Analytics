@@ -74,6 +74,8 @@
     </div>
 
     <script>
+        let liveEventSource = null;
+
         /* Set the width of the sidebar to 20vw and adjust layout */
         function openNav() {
             document.getElementById("mySidebar").style.width = "20vw";
@@ -84,6 +86,61 @@
         function closeNav() {
             document.getElementById("mySidebar").style.width = "0";
             document.getElementById("main").style.marginLeft = "0";
+        }
+
+        // Initialize or tear down the live attendance SSE stream
+        function initLiveAttendanceStream(root) {
+            // Close any previous stream
+            if (liveEventSource) {
+                liveEventSource.close();
+                liveEventSource = null;
+            }
+
+            if (!root) {
+                return;
+            }
+
+            const feedContainer = root.querySelector('#attendance-feed');
+            if (!feedContainer) {
+                return;
+            }
+
+            const eventId = feedContainer.getAttribute('data-event-id');
+            if (!eventId) {
+                return;
+            }
+
+            const sseUrl = `/org/api/attendance-stream/${eventId}/`;
+            const eventSource = new EventSource(sseUrl);
+            liveEventSource = eventSource;
+
+            eventSource.addEventListener('message', function (e) {
+                try {
+                    const data = JSON.parse(e.data);
+
+                    // Skip establishment message
+                    if (data.student_name === 'Connection established') {
+                        return;
+                    }
+
+                    const item = document.createElement('div');
+                    item.className = 'feed-item';
+                    item.innerHTML = `
+                        <div class="feed-time">${data.timestamp}</div>
+                        <div class="feed-info">
+                            <strong>${data.student_name}</strong>
+                            <span class="feed-note">Checked in</span>
+                        </div>
+                    `;
+                    feedContainer.insertBefore(item, feedContainer.firstChild);
+
+                    while (feedContainer.children.length > 50) {
+                        feedContainer.removeChild(feedContainer.lastChild);
+                    }
+                } catch (err) {
+                    console.error('Error parsing SSE data:', err);
+                }
+            }, false);
         }
 
         // Set active sidebar item on click
@@ -100,13 +157,16 @@
             });
         });
 
-        // Listen for HTMX swaps to reinitialize chat interface
+        // Listen for HTMX swaps to reinitialize chat interface and live attendance
         document.body.addEventListener('htmx:afterSwap', function(event) {
             if (event.detail.target.id === 'content-area') {
                 const chatMessages = event.detail.target.querySelector('#chatMessages');
                 if (chatMessages) {
                     console.log('Insights tab loaded, chat should initialize...');
                 }
+
+                // Initialize live attendance stream if overview content is present
+                initLiveAttendanceStream(event.detail.target);
             }
         });
 

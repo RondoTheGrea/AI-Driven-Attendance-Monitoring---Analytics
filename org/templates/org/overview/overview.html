@@ -46,7 +46,7 @@
         </div>
 
         <section id="as">
-            <!-- Sidebar with Risk Indicators and AI Summary -->
+            <!-- Sidebar with Risk Indicators and Live Event -->
             <aside>
                 <section id="riai">
                     <p id="ait">Risk Indicator's (AI Assisted)</p>
@@ -64,35 +64,7 @@
                     </div>
                 </section>
 
-                <section id="aisum">
-                    <p>
-                        <b>AI Insights Summary:</b>
-                        <br><br>
-                        <hr>
-                    </p>
-                    <div class="ai-insights-content">
-                        <br>
-                        Grouped Insights:
-                        <br>
-                        <br>
-                        <ul>
-                            <li>12 students absent for the 3rd time this month</li>
-                            <li>5 absentees belong to the same class</li>
-                            <li>3 students absent without reason for 2+ days</li>
-                        </ul>
-                        <br>
-                        <br>
-                        Suggested Action:
-                        <br>
-                        <br>
-                        <ul>
-                            <li>"Schedule counselor follow-up for John D."</li>
-                        </ul>
-                        <br>
-                    </div>
-                </section>
-
-                <!-- LIVE EVENT TAB - KEPT FROM ORIGINAL -->
+                <!-- LIVE EVENT TAB -->
                 <section id="live-event-section" class="live-event-sidebar">
                     <h3>🔴 Live Event</h3>
                     {% if active_event %}
@@ -180,44 +152,6 @@
                     </div>
                 </section>
             </section>
-        </section>
-    </section>
-</div>
-
-<script>
-// Direct SSE connection for live attendance updates
-const feedContainer = document.getElementById('attendance-feed');
-if (feedContainer) {
-    const eventId = feedContainer.getAttribute('data-event-id');
-    const sseUrl = `/org/api/attendance-stream/${eventId}/`;
-    const eventSource = new EventSource(sseUrl);
-    
-    eventSource.addEventListener('message', function(e) {
-        try {
-            const data = JSON.parse(e.data);
-            
-            // Skip establishment message
-            if (data.student_name === 'Connection established') {
-                return;
-            }
-            
-            const item = document.createElement('div');
-            item.className = 'feed-item';
-            item.innerHTML = `
-                <div class="feed-time">${data.timestamp}</div>
-                <div class="feed-info">
-                    <strong>${data.student_name}</strong>
-                    <span class="feed-note">Checked in</span>
-                </div>
-            `;
-            feedContainer.insertBefore(item, feedContainer.firstChild);
-            
-            while (feedContainer.children.length > 50) {
-                feedContainer.removeChild(feedContainer.lastChild);
-            }
-        } catch (err) {
-            console.error('Error parsing SSE data:', err);
-        }
-    }, false);
-}
-</script>
+                    </section>
+                </section>
+            </div>
