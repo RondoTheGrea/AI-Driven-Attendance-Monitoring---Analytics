@@ -10,62 +10,89 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 <body class="page-dashboard">
-    <div class="navbar">
-        <h1>Organization Dashboard</h1>
-        <a href="{% url 'org-logout' %}">Logout</a>
+    <!-- Sidebar Toggle Button -->
+    <div id="sidebartoggle" class="sidebar-toggle-bar">
+        <button class="openbtn" onclick="openNav()">☰</button>
     </div>
 
-    <div class="dashboard-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <nav class="sidebar-nav">
-                <a href="#" 
-                   class="sidebar-item active" 
-                   hx-get="{% url 'org-dashboard-overview' %}" 
-                   hx-target="#content-area" 
-                   hx-swap="innerHTML">
-                    <span class="icon">📊</span>
-                    <span class="label">Overview</span>
-                </a>
-                <a href="#" 
-                   class="sidebar-item" 
-                   hx-get="{% url 'org-dashboard-events' %}" 
-                   hx-target="#content-area" 
-                   hx-swap="innerHTML">
-                    <span class="icon">📅</span>
-                    <span class="label">Events</span>
-                </a>
-                <a href="#" 
-                   class="sidebar-item" 
-                   hx-get="{% url 'org-dashboard-insights' %}" 
-                   hx-target="#content-area" 
-                   hx-swap="innerHTML">
-                    <span class="icon">📈</span>
-                    <span class="label">AI Insights</span>
-                </a>
-                <a href="#" 
-                   class="sidebar-item" 
-                   hx-get="{% url 'org-dashboard-settings' %}" 
-                   hx-target="#content-area" 
-                   hx-swap="innerHTML">
-                    <span class="icon">⚙️</span>
-                    <span class="label">Settings</span>
-                </a>
-            </nav>
-        </aside>
-
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <div id="content-area">
-                <!-- Content will be loaded here via HTMX -->
+    <!-- Sidebar -->
+    <div id="mySidebar" class="sidebar">
+        <!-- Team UMA Header -->
+        <div id="teamuma" class="sidebar-header">
+            <img src="{% static 'images/ICCT-LOGO.png' %}" alt="ICCT Logo">
+            <div id="teamumatext">
+                <h1>TEAM UMA;</h1>
+                <h1 id="at">Attendance Tracker</h1>
             </div>
-        </main>
+        </div>
+        
+        <!-- Close Button -->
+        <a id="closebutton" href="javascript:void(0)" class="closebtn" onclick="closeNav()">☰</a>
+        
+        <!-- Sidebar Navigation -->
+        <a class="sidebl sidebar-item active" 
+           href="#" 
+           hx-get="{% url 'org-dashboard-overview' %}" 
+           hx-target="#content-area" 
+           hx-swap="innerHTML">
+            Overview
+        </a>
+        <a class="sidebl sidebar-item" 
+           href="#" 
+           hx-get="{% url 'org-dashboard-events' %}" 
+           hx-target="#content-area" 
+           hx-swap="innerHTML">
+            Events
+        </a>
+        <a class="sidebl sidebar-item" 
+           href="#" 
+           hx-get="{% url 'org-dashboard-insights' %}" 
+           hx-target="#content-area" 
+           hx-swap="innerHTML">
+            AI Insights
+        </a>
+        <a class="sidebl sidebar-item" 
+           href="#" 
+           hx-get="{% url 'org-dashboard-settings' %}" 
+           hx-target="#content-area" 
+           hx-swap="innerHTML">
+            Settings
+        </a>
+
+        <!-- Logout Button at Bottom -->
+        <a class="sidebl sidebar-item logout-btn" 
+           href="{% url 'org-logout' %}">
+            Logout
+        </a>
+    </div>
+
+    <!-- Main Content Area -->
+    <div id="main">
+        <div id="content-area">
+            <!-- Content will be loaded here via HTMX -->
+        </div>
     </div>
 
     <script>
+        /* Set the width of the sidebar to 20vw and adjust layout */
+        function openNav() {
+            document.getElementById("mySidebar").style.width = "20vw";
+            document.getElementById("main").style.marginLeft = "18vw";
+        }
+
+        /* Set the width of the sidebar to 0 */
+        function closeNav() {
+            document.getElementById("mySidebar").style.width = "0";
+            document.getElementById("main").style.marginLeft = "0";
+        }
+
         // Set active sidebar item on click
         document.querySelectorAll('.sidebar-item').forEach(item => {
             item.addEventListener('click', function(e) {
+                // Don't prevent default for logout
+                if (this.classList.contains('logout-btn')) {
+                    return;
+                }
                 e.preventDefault();
                 document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
                 this.classList.add('active');
@@ -75,20 +102,21 @@
 
         // Listen for HTMX swaps to reinitialize chat interface
         document.body.addEventListener('htmx:afterSwap', function(event) {
-            // Check if Insights tab was loaded
             if (event.detail.target.id === 'content-area') {
                 const chatMessages = event.detail.target.querySelector('#chatMessages');
                 if (chatMessages) {
-                    // Chat interface was loaded, trigger initialization
-                    // The insights.html script will handle initialization
                     console.log('Insights tab loaded, chat should initialize...');
                 }
             }
         });
 
-        // Load default overview on page load
+        // Load default overview and open sidebar on page load
         document.addEventListener('DOMContentLoaded', function() {
-            const defaultTab = document.querySelector('.sidebar-item.active');
+            // Open the sidebar so tabs are visible immediately
+            openNav();
+
+            // Then load the default active tab content
+            const defaultTab = document.querySelector('.sidebar-item.active:not(.logout-btn)');
             if (defaultTab) {
                 htmx.ajax('GET', defaultTab.getAttribute('hx-get'), {target: '#content-area', swap: 'innerHTML'});
             }
@@ -96,4 +124,3 @@
     </script>
 </body>
 </html>
-

@@ -381,6 +381,17 @@ def chat_message(request):
             'content': user_message
         })
         
+        # Get context data if provided (default to empty arrays)
+        context_data = data.get('context', {})
+        if not isinstance(context_data, dict):
+            context_data = {}
+        
+        # Ensure context has events and students arrays
+        context_payload = {
+            'events': context_data.get('events', []),
+            'students': context_data.get('students', [])
+        }
+        
         payload = {
             'message': user_message,
             'sessionId': session_id,  # For n8n memory
@@ -388,6 +399,7 @@ def chat_message(request):
             'organization_name': organization.organization_name,
             'user_id': request.user.id,
             'conversation_history': conversation_history,  # Send history for better context
+            'context': context_payload,  # Selected events/students for context
         }
         
         # Send request to n8n webhook
@@ -412,24 +424,24 @@ def chat_message(request):
             # Parse n8n response
             n8n_data = response.json()
             
-            # Handle different response formats
+            # Handle different response formats (supporting optional chart_url)
             bot_reply = 'I received your message but could not generate a response.'
-            
+            chart_url = None
+
             if isinstance(n8n_data, dict):
-                # If it's a dict, look for 'reply' key
-                bot_reply = n8n_data.get('reply', n8n_data.get('output', str(n8n_data)))
+                bot_reply = n8n_data.get('reply') or n8n_data.get('text') or n8n_data.get('output', str(n8n_data))
+                chart_url = n8n_data.get('chart_url') or n8n_data.get('chartUrl')
             elif isinstance(n8n_data, list) and len(n8n_data) > 0:
-                # If it's a list, get the first item
                 first_item = n8n_data[0]
                 if isinstance(first_item, dict):
-                    bot_reply = first_item.get('reply', first_item.get('output', str(first_item)))
+                    bot_reply = first_item.get('reply') or first_item.get('text') or first_item.get('output', str(first_item))
+                    chart_url = first_item.get('chart_url') or first_item.get('chartUrl')
                 else:
                     bot_reply = str(first_item)
             else:
-                # If it's just a string
                 bot_reply = str(n8n_data)
             
-            # Save bot reply to database
+            # Save bot reply to database (text only; charts are displayed client-side)
             ChatMessage.objects.create(
                 user=request.user,
                 organization=organization,
@@ -440,6 +452,7 @@ def chat_message(request):
             
             return JsonResponse({
                 'reply': bot_reply,
+                'chart_url': chart_url,
                 'status': 'success'
             })
             
@@ -632,3 +645,123 @@ def calculate_time_difference(event, timestamp):
     # Calculate difference in minutes
     diff = (timestamp - event_start).total_seconds() / 60
     return int(diff)
+
+
+@login_required(login_url='home')
+@require_http_methods(["GET"])
+def api_get_events_for_context(request):
+    """
+    API endpoint to get all events for context selector
+    Returns simplified event list for chat context
+    Note: Does not filter by organization since organization field is optional
+    """
+    try:
+        # Verify user is authenticated (required for login_required)
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Unauthorized'}, status=401)
+    except Exception:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        # Get search query parameter
+        search_query = request.GET.get('search', '').strip()
+        
+        # Get all events (organization is optional, so we don't filter by it)
+        events = Event.objects.all()
+        
+        # Apply search filter if provided (search by title only)
+        if search_query:
+            events = events.filter(title__icontains=search_query)
+        
+        # Sort by date and time (chronological: earliest first)
+        events = events.order_by('event_date', 'start_time')
+        
+        events_list = []
+        for event in events:
+            attendance_count = Attendance.objects.filter(event=event).count()
+            events_list.append({
+                'id': event.id,
+                'title': event.title,
+                'description': event.description or '',
+                'date': event.event_date.isoformat(),
+                'start_time': event.start_time.isoformat(),
+                'end_time': event.end_time.isoformat(),
+                'is_active': event.is_active,
+                'total_attendees': attendance_count
+            })
+        
+        return JsonResponse({
+            'events': events_list,
+            'status': 'success'
+        })
+    except Exception as e:
+        import sys
+        print(f"Error fetching events: {str(e)}", file=sys.stderr, flush=True)
+        return JsonResponse({'error': str(e), 'status': 'error'}, status=500)
+
+
+@login_required(login_url='home')
+@require_http_methods(["GET"])
+def api_get_students_for_context(request):
+    """
+    API endpoint to get all students for context selector
+    Returns simplified student list for chat context
+    Note: Does not filter by organization since organization field is optional
+    """
+    try:
+        # Verify user is authenticated (required for login_required)
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Unauthorized'}, status=401)
+    except Exception:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+    
+    try:
+        # Get search query parameter
+        search_query = request.GET.get('search', '').strip()
+        
+        # Get all students (organization is optional, so we don't filter by it)
+        # Sort alphabetically by first name, then last name
+        # Handle NULL values by using Coalesce to treat NULL as empty string for sorting
+        from django.db.models import F, Value, CharField, Q
+        from django.db.models.functions import Coalesce, Lower
+        
+        students = Student.objects.all()
+        
+        # Apply search filter if provided
+        if search_query:
+            students = students.filter(
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(student_id__icontains=search_query) |
+                Q(email__icontains=search_query)
+            )
+        
+        students = students.annotate(
+            first_name_sort=Coalesce('first_name', Value(''), output_field=CharField()),
+            last_name_sort=Coalesce('last_name', Value(''), output_field=CharField())
+        ).order_by(
+            Lower('first_name_sort'),
+            Lower('last_name_sort')
+        )
+        
+        students_list = []
+        for student in students:
+            students_list.append({
+                'id': student.id,
+                'student_id': student.student_id,
+                'first_name': student.first_name or '',
+                'last_name': student.last_name or '',
+                'middle_name': student.middle_name or '',
+                'email': student.email,
+                'course': student.course,
+                'year_level': student.year_level
+            })
+        
+        return JsonResponse({
+            'students': students_list,
+            'status': 'success'
+        })
+    except Exception as e:
+        import sys
+        print(f"Error fetching students: {str(e)}", file=sys.stderr, flush=True)
+        return JsonResponse({'error': str(e), 'status': 'error'}, status=500)

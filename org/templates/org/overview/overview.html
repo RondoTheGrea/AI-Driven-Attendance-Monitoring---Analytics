@@ -1,78 +1,187 @@
 <!-- Overview Tab Content -->
-<div class="tab-content">
-    <div class="content-header">
-        <h2>Overview</h2>
+<div class="tab-content overview-tab">
+    <h1 class="overview-title">Dashboard</h1>
+
+    <!-- Filters Section -->
+    <div class="flex filter-row">
+        <h6>AI-Generated Today's Attendance Summary</h6>
+        <div class="umafil">
+            <div class="labeledfilter">
+                <p>Year:</p>
+                <button class="filter">All</button>
+            </div>
+            <div class="labeledfilter">
+                <p>Section:</p>
+                <button class="filter">All</button>
+            </div>
+            <div class="labeledfilter">
+                <p>Modality:</p>
+                <button class="filter">All</button>
+            </div>
+        </div>
     </div>
 
-    <div class="overview-container">
-        <!-- Statistics Grid -->
-        <div class="stats-section">
-            <div class="stat-card">
-                <div class="stat-icon">👥</div>
-                <div class="stat-content">
-                    <div class="stat-label">Top Performing Demographics</div>
-                    <div class="stat-value">-</div>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-icon">📋</div>
-                <div class="stat-content">
-                    <div class="stat-label">Historical Average</div>
-                    <div class="stat-value">-</div>
-                </div>
-            </div>
+    <!-- Top Section: AI Summary + Graph -->
+    <section id="top">
+        <section id="aib">
+            <!-- AI Summary Box -->
+        </section>
+        <section id="graph">
+            <!-- Graph/Chart Box -->
+        </section>
+    </section>
 
-            <div class="stat-card">
-                <div class="stat-icon">⏱️</div>
-                <div class="stat-content">
-                    <div class="stat-label">Retention Score</div>
-                    <div class="stat-value">-</div>
-                </div>
+    <!-- Bottom Section: Quick Actions + Risk Indicators + Student List -->
+    <section id="bottom">
+        <div class="flex">
+            <div id="ablag">
+                <button class="abla">Absentees</button>
+                <button class="abla">Late Arrivals</button>
             </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">📅</div>
-                <div class="stat-content">
-                    <div class="stat-label">Predicted Peak Arrival</div>
-                    <div class="stat-value">-</div>
-                </div>
+            <div class="quick-actions">
+                <button class="qa">Flag Students</button>
+                <button class="qa">Request Reason</button>
+                <button class="qa">Generate Attendance Report</button>
             </div>
         </div>
 
-        <!-- Live Event Section -->
-        <div class="live-event-section">
-            <div class="live-event-header">
-                <h3>🔴 Live Event</h3>
-                {% if active_event %}
-                <div class="live-event-meta">
-                    <span class="live-event-title">{{ active_event.title }}</span>
-                    <span class="live-event-time">{{ active_event.start_time|time:"H:i" }} - {{ active_event.end_time|time:"H:i" }}</span>
-                </div>
-                {% else %}
-                <div class="live-event-meta empty">No event currently live.</div>
-                {% endif %}
-            </div>
+        <section id="as">
+            <!-- Sidebar with Risk Indicators and AI Summary -->
+            <aside>
+                <section id="riai">
+                    <p id="ait">Risk Indicator's (AI Assisted)</p>
+                    <div class="risk-indicator">
+                        <span class="risk-color high-risk"></span>
+                        <p><b>High-risk</b> = Attendance < 70%</p>
+                    </div>
+                    <div class="risk-indicator">
+                        <span class="risk-color emerging-risk"></span>
+                        <p><b>Emerging-risk</b> = 2 + Absences in 10 days</p>
+                    </div>
+                    <div class="risk-indicator">
+                        <span class="risk-color low-risk"></span>
+                        <p><b>Low-risk</b> = Occasional Absences</p>
+                    </div>
+                </section>
 
-            <div class="live-feed">
-                {% if active_event %}
-                <div class="live-feed-list" id="attendance-feed" data-event-id="{{ active_event.id }}">
-                    {% for log in recent_logs %}
-                    <div class="feed-item">
-                        <div class="feed-time">{{ log.timestamp|time:"H:i:s" }}</div>
-                        <div class="feed-info">
-                            <strong>{{ log.student.first_name }} {{ log.student.last_name }}</strong>
-                            <span class="feed-note">Checked in</span>
+                <section id="aisum">
+                    <p>
+                        <b>AI Insights Summary:</b>
+                        <br><br>
+                        <hr>
+                    </p>
+                    <div class="ai-insights-content">
+                        <br>
+                        Grouped Insights:
+                        <br>
+                        <br>
+                        <ul>
+                            <li>12 students absent for the 3rd time this month</li>
+                            <li>5 absentees belong to the same class</li>
+                            <li>3 students absent without reason for 2+ days</li>
+                        </ul>
+                        <br>
+                        <br>
+                        Suggested Action:
+                        <br>
+                        <br>
+                        <ul>
+                            <li>"Schedule counselor follow-up for John D."</li>
+                        </ul>
+                        <br>
+                    </div>
+                </section>
+
+                <!-- LIVE EVENT TAB - KEPT FROM ORIGINAL -->
+                <section id="live-event-section" class="live-event-sidebar">
+                    <h3>🔴 Live Event</h3>
+                    {% if active_event %}
+                    <div class="live-event-meta">
+                        <span class="live-event-title">{{ active_event.title }}</span>
+                        <span class="live-event-time">{{ active_event.start_time|time:"H:i" }} - {{ active_event.end_time|time:"H:i" }}</span>
+                    </div>
+                    {% else %}
+                    <div class="live-event-meta empty">No event currently live.</div>
+                    {% endif %}
+                    
+                    <div class="live-feed">
+                        {% if active_event %}
+                        <div class="live-feed-list" id="attendance-feed" data-event-id="{{ active_event.id }}">
+                            {% for log in recent_logs %}
+                            <div class="feed-item">
+                                <div class="feed-time">{{ log.timestamp|time:"H:i:s" }}</div>
+                                <div class="feed-info">
+                                    <strong>{{ log.student.first_name }} {{ log.student.last_name }}</strong>
+                                    <span class="feed-note">Checked in</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-feed">Start an event to see live check-ins.</div>
+                        {% endif %}
+                    </div>
+                </section>
+            </aside>
+
+            <!-- Main Student List -->
+            <section id="list">
+                <div class="flex">
+                    <input type="text" placeholder="Search Student Name or #">
+                    <div class="umafil">
+                        <div class="labeledfilter">
+                            <p>Year:</p>
+                            <button class="filter">All</button>
+                        </div>
+                        <div class="labeledfilter">
+                            <p>Section:</p>
+                            <button class="filter">All</button>
+                        </div>
+                        <div class="labeledfilter">
+                            <p>Modality:</p>
+                            <button class="filter">All</button>
                         </div>
                     </div>
-                    {% endfor %}
                 </div>
-                {% else %}
-                <div class="empty-feed">Start an event to see live check-ins.</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+
+                <section id="student-list">
+                    <table>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Student Number</th>
+                            <th>Section Number</th>
+                            <th>Absence Type</th>
+                            <th>AI Flag</th>
+                            <th>Reason (If Known)</th>
+                        </tr>
+                    </table>
+
+                    <div id="students">
+                        <a href="#">
+                            <div class="student">
+                                <p>John Doe</p>
+                                <p>|</p>
+                                <p>CA202600001</p>
+                                <p>|</p>
+                                <p>LFCA111M001</p>
+                                <p>|</p>
+                                <p>Full Day</p>
+                                <p>|</p>
+                                <p>
+                                    <div class="risk-flag">
+                                        <span class="risk-color high-risk"></span>
+                                        <p><b>Chronic risk</b></p>
+                                    </div>
+                                </p>
+                                <p>|</p>
+                                <p>None</p>
+                            </div>
+                        </a>
+                    </div>
+                </section>
+            </section>
+        </section>
+    </section>
 </div>
 
 <script>

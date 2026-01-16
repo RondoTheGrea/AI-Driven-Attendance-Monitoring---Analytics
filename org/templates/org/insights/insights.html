@@ -2,9 +2,6 @@
 <div class="tab-content">
     <div class="content-header">
         <h2>AI Insights Chat</h2>
-        <button id="newChatBtn" class="new-chat-btn" onclick="createNewChat()" title="Start new chat">
-            + New Chat
-        </button>
     </div>
 
     <div class="insights-layout">
@@ -12,8 +9,8 @@
         <aside class="chat-history-sidebar" id="chatHistorySidebar">
             <div class="sidebar-header">
                 <h3>Chat History</h3>
-                <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
-                    <span id="toggleIcon">☰</span>
+                <button class="new-chat-icon-btn" onclick="createNewChat()" title="Create new chat">
+                    +
                 </button>
             </div>
             <div class="chat-sessions-list" id="chatSessionsList">
@@ -44,6 +41,9 @@
             <!-- Input Area -->
             <div class="chat-input-area">
                 <div class="input-container">
+                    <button class="context-btn" id="contextBtn" onclick="toggleContextSelector()" title="Add context (Events/Students)">
+                        <span>+</span>
+                    </button>
                     <input 
                         type="text" 
                         id="messageInput" 
@@ -58,6 +58,46 @@
                             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                         </svg>
                     </button>
+                </div>
+                
+                <!-- Selected Context Display -->
+                <div id="selectedContextDisplay" class="selected-context-display" style="display: none;">
+                    <span id="selectedContextText"></span>
+                    <button onclick="clearSelectedContext()" class="clear-context-btn">×</button>
+                </div>
+            </div>
+            
+            <!-- Context Selector Modal -->
+            <div id="contextSelectorModal" class="context-selector-modal" style="display: none;">
+                <div class="context-selector-content">
+                    <!-- Option Tabs -->
+                    <div class="context-option-tabs">
+                        <button class="context-tab-btn" id="eventsTabBtn" onclick="switchContextTab('events')">Events</button>
+                        <button class="context-tab-btn" id="studentsTabBtn" onclick="switchContextTab('students')">Students</button>
+                    </div>
+                    
+                    <!-- Content Area -->
+                    <div class="context-content-area">
+                        <!-- Events List -->
+                        <div id="eventsContextPanel" class="context-panel" style="display: none;">
+                            <input type="text" id="eventsSearchInput" class="context-search-input" placeholder="Search events by title..." onkeyup="debounceEventSearch(this.value)">
+                            <div class="context-loading" id="eventsLoading">Loading events...</div>
+                            <div id="eventsList" class="context-items-list"></div>
+                        </div>
+                        
+                        <!-- Students List -->
+                        <div id="studentsContextPanel" class="context-panel" style="display: none;">
+                            <input type="text" id="studentsSearchInput" class="context-search-input" placeholder="Search students by name, ID, or email..." onkeyup="debounceStudentSearch(this.value)">
+                            <div class="context-loading" id="studentsLoading">Loading students...</div>
+                            <div id="studentsList" class="context-items-list"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="context-actions">
+                        <button class="context-action-btn cancel-btn" onclick="closeContextSelector()">Cancel</button>
+                        <button class="context-action-btn confirm-btn" onclick="confirmContextSelection()">Add Context</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -79,11 +119,11 @@
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            background: linear-gradient(to bottom, #f8f9ff, #ffffff);
+            gap: 16px;
+            background: linear-gradient(to bottom, #fafbff 0%, #ffffff 100%);
         }
 
         /* Message Styles */
@@ -113,9 +153,10 @@
         .bot-message .message-content {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 12px 16px;
-            border-radius: 12px;
+            padding: 14px 18px;
+            border-radius: 16px;
             border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
         }
 
         /* User Message */
@@ -124,17 +165,53 @@
         }
 
         .user-message .message-content {
-            background: #e8e8e8;
+            background: #ffffff;
             color: #333;
-            padding: 12px 16px;
-            border-radius: 12px;
+            padding: 14px 18px;
+            border-radius: 16px;
             border-bottom-right-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e8e8f3;
         }
 
         .message-content {
             word-wrap: break-word;
             line-height: 1.6;
             font-size: 14px;
+        }
+
+        /* Context Display in Chat */
+        .chat-context-display {
+            align-self: center;
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin: 10px 0;
+            font-size: 13px;
+            max-width: 80%;
+        }
+
+        .chat-context-display em {
+            font-weight: 600;
+            font-style: normal;
+        }
+        
+
+        .chat-chart-wrapper {
+            margin-top: 10px;
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .chat-chart-image {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
         }
 
         .message-content p {
@@ -250,6 +327,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            gap: 16px;
         }
 
         .content-header h2 {
@@ -260,29 +338,38 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
+            font-size: 28px;
+            font-weight: 300;
             transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            padding: 0;
+            line-height: 1;
         }
 
         .new-chat-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
         /* Chat History Sidebar */
         .insights-layout {
             display: flex;
+            flex-direction: row-reverse;
             gap: 20px;
-            height: calc(100vh - 200px);
+            height: calc(100vh - 120px);
+            flex: 1;
         }
 
         .chat-history-sidebar {
             width: 280px;
-            background: white;
+            background: #f5f5f8;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             display: flex;
@@ -295,7 +382,6 @@
         }
 
         .sidebar-header {
-            padding: 15px;
             border-bottom: 1px solid #e0e0e0;
             display: flex;
             justify-content: space-between;
@@ -322,15 +408,64 @@
             color: #667eea;
         }
 
+        .new-chat-icon-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 22px;
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            padding: 0;
+            line-height: 1;
+        }
+
+        .new-chat-icon-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .new-chat-icon-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 22px;
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            padding: 0;
+            line-height: 1;
+        }
+
+        .new-chat-icon-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
         .chat-sessions-list {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
+            padding: 0;
+            margin-top: -2px;
         }
 
         .chat-session-item {
             padding: 12px;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -339,14 +474,19 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: #f5f7fb;
+        }
+
+        .chat-session-item:first-of-type {
+            margin-top: 0;
         }
 
         .chat-session-item:hover {
-            background: #f5f5f5;
+            background: #ececf1;
         }
 
         .chat-session-item.active {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            background: #ececf1;
             border-color: #667eea;
         }
 
@@ -413,41 +553,49 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background: #e3e8ff; /* distinct card behind chat-header */
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             overflow: hidden;
+            border: 1px solid #d0d7ff;
         }
 
         .chat-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 18px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .current-chat-title {
             font-weight: 600;
-            font-size: 16px;
-            color: #333;
+            font-size: 17px;
+            color: white;
+            letter-spacing: 0.3px;
         }
 
         .clear-chat-btn {
-            background: #dc3545;
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 13px;
             font-weight: 500;
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
 
         .clear-chat-btn:hover {
-            background: #c82333;
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
             transform: translateY(-1px);
         }
 
@@ -468,15 +616,46 @@
 
         /* Input Area */
         .chat-input-area {
-            padding: 15px 20px;
-            border-top: 1px solid #e0e0e0;
-            background: white;
+            padding: 20px 24px;
+            background: #f8f9ff;
+            border-top: 1px solid #e8e8f3;
         }
 
         .input-container {
             display: flex;
             gap: 10px;
             align-items: center;
+        }
+
+        .context-btn {
+            background: #f0f0f0;
+            color: #667eea;
+            border: 2px solid #e0e0e0;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .context-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .context-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
         }
 
         .chat-input {
@@ -543,6 +722,256 @@
             background: #764ba2;
         }
 
+        /* Selected Context Display */
+        .selected-context-display {
+            padding: 8px 12px;
+            margin-top: 8px;
+            background: #f0f7ff;
+            border: 1px solid #667eea;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #667eea;
+        }
+
+        .clear-context-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+        }
+
+        .clear-context-btn:hover {
+            color: #dc3545;
+        }
+
+        /* Context Selector Modal */
+        .context-selector-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .context-selector-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .context-option-tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 0 20px;
+        }
+
+        .context-tab-btn {
+            background: none;
+            border: none;
+            padding: 15px 25px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .context-tab-btn:hover {
+            color: #667eea;
+        }
+
+        .context-tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .context-content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            min-height: 400px;
+            max-height: 500px;
+        }
+
+        .context-panel {
+            display: none !important;
+        }
+
+        .context-panel.active {
+            display: block !important;
+        }
+
+        .context-search-input {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .context-search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .context-loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .context-items-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        /* Event Card in Context Selector */
+        .context-event-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .context-event-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .context-event-card.selected {
+            border-color: #667eea;
+            background: #f0f7ff;
+        }
+
+        .context-event-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .context-event-date {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .context-event-time {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .context-event-attendees {
+            font-size: 12px;
+            color: #667eea;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        /* Student Card in Context Selector */
+        .context-student-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .context-student-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .context-student-card.selected {
+            border-color: #667eea;
+            background: #f0f7ff;
+        }
+
+        .context-student-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .context-student-id {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .context-student-course {
+            font-size: 12px;
+            color: #667eea;
+        }
+
+        .context-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 15px 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .context-action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .context-action-btn.cancel-btn {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .context-action-btn.cancel-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .context-action-btn.confirm-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .context-action-btn.confirm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .context-action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .chat-message {
@@ -561,6 +990,15 @@
 
             .chat-history-sidebar.collapsed {
                 max-height: 50px;
+            }
+
+            .context-selector-content {
+                width: 95%;
+                max-height: 90vh;
+            }
+
+            .context-items-list {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -582,6 +1020,12 @@
             return cookieValue;
         }
 
+        // Context Selection State
+        let selectedContext = {
+            events: [],
+            students: []
+        };
+
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const sendBtn = document.getElementById('sendBtn');
@@ -596,12 +1040,26 @@
                 await new Promise(resolve => setTimeout(resolve, 50));
             }
 
+            // Store context for this message before clearing
+            const messageContext = {
+                events: [...selectedContext.events],
+                students: [...selectedContext.students]
+            };
+
+            // Display context if any was selected
+            if (messageContext.events.length > 0 || messageContext.students.length > 0) {
+                renderContextDisplay(messageContext);
+            }
+
             // Add user message to chat (this will save to currentChatId)
             renderMessage(messageText, 'user');
 
             // Clear input and disable button
             input.value = '';
             sendBtn.disabled = true;
+
+            // Clear context after sending
+            clearSelectedContext();
 
             // Show typing indicator
             const typingId = addTypingIndicator();
@@ -615,7 +1073,8 @@
                         'X-CSRFToken': getCookie('csrftoken'),
                     },
                     body: JSON.stringify({
-                        message: messageText
+                        message: messageText,
+                        context: messageContext  // Include selected context
                     })
                 });
 
@@ -628,7 +1087,9 @@
                 }
 
                 const data = await response.json();
-                renderMessage(data.reply, 'bot');
+                const replyText = data.reply || data.text || 'I received your message but could not generate a response.';
+                const chartUrl = data.chart_url || data.chartUrl || null;
+                renderMessage(replyText, 'bot', undefined, false, chartUrl);
 
             } catch (error) {
                 console.error('Chat error:', error);
@@ -642,6 +1103,30 @@
                 sendBtn.disabled = false;
                 input.focus();
             }
+        }
+
+        function renderContextDisplay(context) {
+            const chatMessages = document.getElementById('chatMessages');
+            const contextDiv = document.createElement('div');
+            contextDiv.className = 'chat-context-display';
+            
+            let contextHTML = '<strong>📌 Context:</strong> ';
+            const parts = [];
+            
+            if (context.events && context.events.length > 0) {
+                const eventNames = context.events.map(e => `<em>${e.title}</em>`).join(', ');
+                parts.push(`Events: ${eventNames}`);
+            }
+            
+            if (context.students && context.students.length > 0) {
+                const studentNames = context.students.map(s => `<em>${s.first_name} ${s.last_name}</em>`).join(', ');
+                parts.push(`Students: ${studentNames}`);
+            }
+            
+            contextHTML += parts.join(' | ');
+            contextDiv.innerHTML = contextHTML;
+            chatMessages.appendChild(contextDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
 
@@ -680,7 +1165,7 @@
         }
 
         // Save message to current chat session
-        function saveMessageToCurrentChat(text, sender, timestamp) {
+        function saveMessageToCurrentChat(text, sender, timestamp, chartUrl = null) {
             // Ensure we have a valid currentChatId
             if (!currentChatId) {
                 console.error('Cannot save message: No current chat ID');
@@ -703,7 +1188,8 @@
             sessions[currentChatId].messages.push({
                 text: text,
                 sender: sender,
-                timestamp: timestamp
+                timestamp: timestamp,
+                chartUrl: chartUrl
             });
             
             // Update title from first user message if it's still "New Chat"
@@ -748,7 +1234,8 @@
             } else {
                 // Load all messages from THIS specific session only (skipSave=true prevents duplicate saving)
                 session.messages.forEach(msg => {
-                    renderMessage(msg.text, msg.sender, msg.timestamp, true);
+                    const storedChart = msg.chartUrl || msg.chart_url || null;
+                    renderMessage(msg.text, msg.sender, msg.timestamp, true, storedChart);
                 });
             }
             
@@ -769,7 +1256,7 @@
         }
 
         // Render a single message (helper function extracted from addMessage)
-        function renderMessage(text, sender, timestamp, skipSave = false) {
+        function renderMessage(text, sender, timestamp, skipSave = false, chartUrl = null) {
             const chatMessages = document.getElementById('chatMessages');
             
             const messageDiv = document.createElement('div');
@@ -777,6 +1264,7 @@
             
             const now = new Date();
             const timeString = timestamp || now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const safeChartUrl = chartUrl && /^https?:\/\//i.test(chartUrl) ? chartUrl : null;
             
             let content;
             if (sender === 'bot') {
@@ -832,15 +1320,21 @@
                 content = `<p>${escapeHtml(text)}</p>`;
             }
             
+            const chartHtml = safeChartUrl ? `
+                <div class="chat-chart-wrapper">
+                    <img src="${escapeHtml(safeChartUrl)}" alt="Generated chart" class="chat-chart-image" loading="lazy">
+                </div>
+            ` : '';
+
             messageDiv.innerHTML = `
-                <div class="message-content">${content}</div>
+                <div class="message-content">${content}${chartHtml}</div>
                 <span class="message-time">${timeString}</span>
             `;
             
             chatMessages.appendChild(messageDiv);
             
             if (!skipSave) {
-                saveMessageToCurrentChat(text, sender, timeString);
+                saveMessageToCurrentChat(text, sender, timeString, safeChartUrl);
             }
             
             chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -850,6 +1344,9 @@
         function createNewChat() {
             const newChatId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             const sessions = getAllChatSessions();
+            
+            // Clear context for new chat
+            clearSelectedContext();
             
             // Set currentChatId IMMEDIATELY to ensure messages are saved to the right chat
             currentChatId = newChatId;
@@ -1064,4 +1561,507 @@
                 clearInterval(checkInterval);
             }
         }, 200);
+
+        // ========================================================================
+        // Context Selector Functions
+        // ========================================================================
+
+        let currentContextTab = 'events';
+
+        function toggleContextSelector() {
+            const modal = document.getElementById('contextSelectorModal');
+            if (!modal) {
+                console.error('Context selector modal not found');
+                return;
+            }
+            
+            if (modal.style.display === 'none' || !modal.style.display) {
+                modal.style.display = 'flex';
+                console.log('Opening context selector, switching to tab:', currentContextTab);
+                switchContextTab(currentContextTab);
+            } else {
+                modal.style.display = 'none';
+            }
+        }
+
+        function closeContextSelector() {
+            document.getElementById('contextSelectorModal').style.display = 'none';
+        }
+
+        function switchContextTab(tab) {
+            currentContextTab = tab;
+            
+            const eventsTabBtn = document.getElementById('eventsTabBtn');
+            const studentsTabBtn = document.getElementById('studentsTabBtn');
+            const eventsPanel = document.getElementById('eventsContextPanel');
+            const studentsPanel = document.getElementById('studentsContextPanel');
+            const eventsSearchInput = document.getElementById('eventsSearchInput');
+            const studentsSearchInput = document.getElementById('studentsSearchInput');
+            
+            // Update tab buttons
+            if (eventsTabBtn) {
+                if (tab === 'events') {
+                    eventsTabBtn.classList.add('active');
+                } else {
+                    eventsTabBtn.classList.remove('active');
+                }
+            }
+            
+            if (studentsTabBtn) {
+                if (tab === 'students') {
+                    studentsTabBtn.classList.add('active');
+                } else {
+                    studentsTabBtn.classList.remove('active');
+                }
+            }
+            
+            // Update panels - explicitly set display
+            if (eventsPanel) {
+                if (tab === 'events') {
+                    eventsPanel.classList.add('active');
+                    eventsPanel.style.display = 'block';
+                    // Clear search input when switching to events tab
+                    if (eventsSearchInput) {
+                        eventsSearchInput.value = '';
+                    }
+                } else {
+                    eventsPanel.classList.remove('active');
+                    eventsPanel.style.display = 'none';
+                }
+            }
+            
+            if (studentsPanel) {
+                if (tab === 'students') {
+                    studentsPanel.classList.add('active');
+                    studentsPanel.style.display = 'block';
+                    // Clear search input when switching to students tab
+                    if (studentsSearchInput) {
+                        studentsSearchInput.value = '';
+                    }
+                } else {
+                    studentsPanel.classList.remove('active');
+                    studentsPanel.style.display = 'none';
+                }
+            }
+            
+            // Load data if not loaded
+            const eventsList = document.getElementById('eventsList');
+            const studentsList = document.getElementById('studentsList');
+            
+            if (tab === 'events' && eventsList && eventsList.children.length === 0) {
+                loadEventsForContext();
+            } else if (tab === 'students' && studentsList && studentsList.children.length === 0) {
+                loadStudentsForContext();
+            }
+        }
+
+        async function loadEventsForContext() {
+            const loadingEl = document.getElementById('eventsLoading');
+            const listEl = document.getElementById('eventsList');
+            
+            if (!loadingEl || !listEl) {
+                console.error('Events context elements not found');
+                return;
+            }
+            
+            loadingEl.style.display = 'block';
+            listEl.innerHTML = '';
+            
+            try {
+                const response = await fetch('/org/api/context/events/', {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Failed to load events:', response.status, errorText);
+                    throw new Error(`Failed to load events: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                loadingEl.style.display = 'none';
+                
+                console.log('Events loaded:', data); // Debug log
+                
+                if (data.events && data.events.length > 0) {
+                    console.log(`Rendering ${data.events.length} event cards`);
+                    data.events.forEach((event, index) => {
+                        console.log(`Creating event card ${index + 1}:`, event);
+                        const card = createEventContextCard(event);
+                        listEl.appendChild(card);
+                    });
+                    console.log(`Events list now has ${listEl.children.length} children`);
+                } else {
+                    listEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No events found</div>';
+                }
+            } catch (error) {
+                console.error('Error loading events:', error);
+                loadingEl.style.display = 'none';
+                listEl.innerHTML = `<div style="text-align: center; padding: 40px; color: #dc3545;">Error loading events: ${error.message}</div>`;
+            }
+        }
+
+        async function loadStudentsForContext() {
+            const loadingEl = document.getElementById('studentsLoading');
+            const listEl = document.getElementById('studentsList');
+            
+            if (!loadingEl || !listEl) {
+                console.error('Students context elements not found');
+                return;
+            }
+            
+            loadingEl.style.display = 'block';
+            listEl.innerHTML = '';
+            
+            try {
+                const response = await fetch('/org/api/context/students/', {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Failed to load students:', response.status, errorText);
+                    throw new Error(`Failed to load students: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                loadingEl.style.display = 'none';
+                
+                console.log('Students loaded:', data); // Debug log
+                
+                if (data.students && data.students.length > 0) {
+                    console.log(`Rendering ${data.students.length} student cards`);
+                    
+                    // Sort students alphabetically by first name, then last name (client-side as backup)
+                    const sortedStudents = [...data.students].sort((a, b) => {
+                        const aFirstName = (a.first_name || '').toLowerCase();
+                        const bFirstName = (b.first_name || '').toLowerCase();
+                        const aLastName = (a.last_name || '').toLowerCase();
+                        const bLastName = (b.last_name || '').toLowerCase();
+                        
+                        if (aFirstName !== bFirstName) {
+                            return aFirstName.localeCompare(bFirstName);
+                        }
+                        return aLastName.localeCompare(bLastName);
+                    });
+                    
+                    sortedStudents.forEach((student, index) => {
+                        if (index < 3) console.log(`Creating student card ${index + 1}:`, student);
+                        const card = createStudentContextCard(student);
+                        listEl.appendChild(card);
+                    });
+                    console.log(`Students list now has ${listEl.children.length} children`);
+                } else {
+                    listEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No students found</div>';
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+                loadingEl.style.display = 'none';
+                listEl.innerHTML = `<div style="text-align: center; padding: 40px; color: #dc3545;">Error loading students: ${error.message}</div>`;
+            }
+        }
+
+        function createEventContextCard(event) {
+            const card = document.createElement('div');
+            card.className = 'context-event-card';
+            card.dataset.eventId = event.id;
+            
+            try {
+                // Parse date and time
+                const date = new Date(event.date);
+                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                
+                // Parse time - handle ISO format (HH:MM:SS or HH:MM)
+                let startTimeStr = event.start_time;
+                let endTimeStr = event.end_time;
+                
+                // If time is in HH:MM:SS format, extract HH:MM
+                if (startTimeStr.includes(':')) {
+                    const startParts = startTimeStr.split(':');
+                    startTimeStr = `${startParts[0]}:${startParts[1]}`;
+                }
+                if (endTimeStr.includes(':')) {
+                    const endParts = endTimeStr.split(':');
+                    endTimeStr = `${endParts[0]}:${endParts[1]}`;
+                }
+                
+                card.innerHTML = `
+                    <div class="context-event-title">${escapeHtml(event.title)}</div>
+                    <div class="context-event-date">📅 ${dateStr}</div>
+                    <div class="context-event-time">⏱️ ${startTimeStr} - ${endTimeStr}</div>
+                    <div class="context-event-attendees">👥 ${event.total_attendees || 0} attendees</div>
+                `;
+                
+                card.onclick = () => toggleEventSelection(event.id, card);
+                
+                // Check if already selected
+                if (selectedContext.events.some(e => e.id === event.id)) {
+                    card.classList.add('selected');
+                }
+                
+                return card;
+            } catch (error) {
+                console.error('Error creating event card:', error, event);
+                // Return a simple card even if parsing fails
+                card.innerHTML = `
+                    <div class="context-event-title">${escapeHtml(event.title)}</div>
+                    <div class="context-event-date">📅 ${event.date}</div>
+                `;
+                return card;
+            }
+        }
+
+        function createStudentContextCard(student) {
+            const card = document.createElement('div');
+            card.className = 'context-student-card';
+            card.dataset.studentId = student.id;
+            
+            card.innerHTML = `
+                <div class="context-student-name">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</div>
+                <div class="context-student-id">ID: ${escapeHtml(student.student_id)}</div>
+                <div class="context-student-course">📚 ${escapeHtml(student.course)} - Year ${student.year_level}</div>
+            `;
+            
+            card.onclick = () => toggleStudentSelection(student.id, card, student);
+            
+            // Check if already selected
+            if (selectedContext.students.some(s => s.id === student.id)) {
+                card.classList.add('selected');
+            }
+            
+            return card;
+        }
+
+        function toggleEventSelection(eventId, cardElement) {
+            const index = selectedContext.events.findIndex(e => e.id === eventId);
+            
+            if (index > -1) {
+                // Deselect
+                selectedContext.events.splice(index, 1);
+                cardElement.classList.remove('selected');
+            } else {
+                // Select - fetch full event data
+                fetch(`/org/api/context/events/`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const event = data.events.find(e => e.id === eventId);
+                        if (event) {
+                            selectedContext.events.push(event);
+                            cardElement.classList.add('selected');
+                        }
+                    });
+            }
+            
+            updateContextDisplay();
+        }
+
+        function toggleStudentSelection(studentId, cardElement, studentData) {
+            const index = selectedContext.students.findIndex(s => s.id === studentId);
+            
+            if (index > -1) {
+                // Deselect
+                selectedContext.students.splice(index, 1);
+                cardElement.classList.remove('selected');
+            } else {
+                // Select
+                selectedContext.students.push(studentData);
+                cardElement.classList.add('selected');
+            }
+            
+            updateContextDisplay();
+        }
+
+        function updateContextDisplay() {
+            const display = document.getElementById('selectedContextDisplay');
+            const text = document.getElementById('selectedContextText');
+            const contextBtn = document.getElementById('contextBtn');
+            
+            const eventCount = selectedContext.events.length;
+            const studentCount = selectedContext.students.length;
+            
+            // Update button active state
+            if (contextBtn) {
+                if (eventCount > 0 || studentCount > 0) {
+                    contextBtn.classList.add('active');
+                } else {
+                    contextBtn.classList.remove('active');
+                }
+            }
+            
+            if (eventCount === 0 && studentCount === 0) {
+                display.style.display = 'none';
+                return;
+            }
+            
+            let contextText = '';
+            if (eventCount > 0) {
+                contextText += `${eventCount} event${eventCount > 1 ? 's' : ''}`;
+            }
+            if (studentCount > 0) {
+                if (contextText) contextText += ', ';
+                contextText += `${studentCount} student${studentCount > 1 ? 's' : ''}`;
+            }
+            
+            text.textContent = `Context: ${contextText}`;
+            display.style.display = 'flex';
+        }
+
+        function confirmContextSelection() {
+            updateContextDisplay();
+            closeContextSelector();
+        }
+
+        function clearSelectedContext() {
+            selectedContext = { events: [], students: [] };
+            updateContextDisplay();
+            
+            // Clear selections in modal
+            document.querySelectorAll('.context-event-card.selected, .context-student-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+        }
+
+        // Debounce variables for search
+        let eventSearchTimeout;
+        let studentSearchTimeout;
+
+        // Search students with debouncing
+        function debounceStudentSearch(query) {
+            clearTimeout(studentSearchTimeout);
+            studentSearchTimeout = setTimeout(() => {
+                performStudentSearch(query);
+            }, 300);
+        }
+
+        // Search events with debouncing
+        function debounceEventSearch(query) {
+            clearTimeout(eventSearchTimeout);
+            eventSearchTimeout = setTimeout(() => {
+                performEventSearch(query);
+            }, 300);
+        }
+
+        // Perform student search
+        async function performStudentSearch(query) {
+            const loadingEl = document.getElementById('studentsLoading');
+            const listEl = document.getElementById('studentsList');
+            
+            if (!loadingEl || !listEl) return;
+            
+            loadingEl.style.display = 'block';
+            listEl.innerHTML = '';
+            
+            try {
+                const url = `/org/api/context/students/?search=${encodeURIComponent(query)}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to search students: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                loadingEl.style.display = 'none';
+                
+                if (data.students && data.students.length > 0) {
+                    // Sort by first name, then last name
+                    const sortedStudents = [...data.students].sort((a, b) => {
+                        const aFirstName = (a.first_name || '').toLowerCase();
+                        const bFirstName = (b.first_name || '').toLowerCase();
+                        const aLastName = (a.last_name || '').toLowerCase();
+                        const bLastName = (b.last_name || '').toLowerCase();
+                        
+                        if (aFirstName !== bFirstName) {
+                            return aFirstName.localeCompare(bFirstName);
+                        }
+                        return aLastName.localeCompare(bLastName);
+                    });
+                    
+                    sortedStudents.forEach((student) => {
+                        const card = createStudentContextCard(student);
+                        listEl.appendChild(card);
+                    });
+                } else {
+                    listEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No students found</div>';
+                }
+            } catch (error) {
+                console.error('Error searching students:', error);
+                loadingEl.style.display = 'none';
+                listEl.innerHTML = `<div style="text-align: center; padding: 40px; color: #dc3545;">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Perform event search
+        async function performEventSearch(query) {
+            const loadingEl = document.getElementById('eventsLoading');
+            const listEl = document.getElementById('eventsList');
+            
+            if (!loadingEl || !listEl) return;
+            
+            loadingEl.style.display = 'block';
+            listEl.innerHTML = '';
+            
+            try {
+                const url = `/org/api/context/events/?search=${encodeURIComponent(query)}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to search events: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                loadingEl.style.display = 'none';
+                
+                if (data.events && data.events.length > 0) {
+                    data.events.forEach((event) => {
+                        const card = createEventContextCard(event);
+                        listEl.appendChild(card);
+                    });
+                } else {
+                    listEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No events found</div>';
+                }
+            } catch (error) {
+                console.error('Error searching events:', error);
+                loadingEl.style.display = 'none';
+                listEl.innerHTML = `<div style="text-align: center; padding: 40px; color: #dc3545;">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('contextSelectorModal');
+            if (event.target === modal) {
+                closeContextSelector();
+            }
+        });
+
+        // Clear context after sending message (optional - comment out if you want context to persist)
+        // Note: Context is now sent with each message, so you can choose to keep it or clear it
+        // Uncomment the code below if you want context cleared after sending:
+        /*
+        const originalSendMessage = sendMessage;
+        sendMessage = async function() {
+            await originalSendMessage();
+            clearSelectedContext();
+        };
+        */
     </script>

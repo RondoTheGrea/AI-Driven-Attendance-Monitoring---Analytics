@@ -20,6 +20,10 @@ urlpatterns = [
     # Chat endpoint for AI insights
     path('api/chat/', views.chat_message, name='chat-message'),
     
+    # Context selector API endpoints
+    path('api/context/events/', views.api_get_events_for_context, name='api-context-events'),
+    path('api/context/students/', views.api_get_students_for_context, name='api-context-students'),
+    
     # API endpoints for n8n integration
     path('api/event/<int:event_id>/attendance/', views.api_get_event_attendance, name='api-event-attendance'),
     path('api/organization/<int:org_id>/events/', views.api_get_organization_events, name='api-org-events'),
